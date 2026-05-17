@@ -40,7 +40,7 @@ onMounted(() => {
             <span class="logo-icon">🔧</span>
           </div>
           <div class="title-container">
-            <h1 class="title">设备管理</h1>
+            <h1 class="title">智器通</h1>
           </div>
         </div>
         
