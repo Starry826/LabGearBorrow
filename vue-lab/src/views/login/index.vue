@@ -336,103 +336,95 @@ const switchForm = (form) => {
   align-items: center;
   justify-content: center;
   height: 92vh;
-  background: linear-gradient(to right, #667eea, #764ba2);
-  color: white;
+  background: #f5f5f5;
   padding: 20px;
 }
 
 .login-title {
   margin-bottom: 30px;
-  font-size: 28px;
-  font-weight: bold;
+  font-size: 24px;
+  font-weight: 500;
+  color: #333;
 }
 
 .login-form {
-  background: rgba(255, 255, 255, 0.1);
+  background: #fff;
   padding: 40px;
-  border-radius: 10px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
   width: 100%;
   max-width: 450px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* 专门为忘记密码表单添加的样式 */
+/* 专门为忘记密码和注册表单添加的样式 */
 .forgot-form {
-  padding: 30px 40px; /* 减少上下内边距 */
+  padding: 30px 40px;
 }
 
 .forgot-form .input-group {
-  margin-bottom: 18px; /* 减少输入组之间的间距 */
+  margin-bottom: 18px;
 }
 
 .forgot-form .label {
   display: block;
-  margin-bottom: 8px; /* 减少标签与输入框的间距 */
-  color: #ffffff;
-  font-weight: 500;
-  font-size: 14px; /* 稍微减小标签字体大小 */
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 400;
+  font-size: 14px;
 }
 
 .forgot-form .input-field {
   width: 100%;
-  padding: 12px; /* 减少输入框内边距 */
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px;
+  border: 1px solid #d9d9d9;
   border-radius: 6px;
-  font-size: 14px; /* 减小输入框字体大小 */
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  transition: all 0.3s ease;
+  font-size: 14px;
+  background: #fff;
+  color: #333;
 }
 
 .forgot-form .input-field::placeholder {
-  color: rgba(255, 255, 255, 0.7);
+  color: #bfbfbf;
 }
 
 .forgot-form .input-field:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
 }
 
 .forgot-form .login-button {
   width: 100%;
-  padding: 14px; /* 减少按钮内边距 */
-  background: rgba(255, 255, 255, 0.2);
+  padding: 14px;
+  background: #1890ff;
   color: white;
   border: none;
   border-radius: 6px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
-  transition: all 0.3s ease;
   margin-bottom: 20px;
 }
 
 .forgot-form .login-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  background: #40a9ff;
 }
 
 .forgot-form .links {
-  margin-top: 15px; /* 减少链接区域的上边距 */
+  margin-top: 15px;
   text-align: center;
 }
 
 .forgot-form .link {
   margin: 0 10px;
-  color: #ffffff;
+  color: #1890ff;
   text-decoration: none;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 .forgot-form .link:hover {
   text-decoration: underline;
-  color: rgba(255, 255, 255, 0.8);
 }
 
 .forgot-form .verification-code-group {
@@ -446,24 +438,25 @@ const switchForm = (form) => {
 
 .forgot-form .send-code-button {
   padding: 0 15px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
+  background: #fafafa;
+  color: #333;
+  border: 1px solid #d9d9d9;
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
   white-space: nowrap;
-  height: 42px; /* 使按钮高度与输入框一致 */
+  height: 42px;
 }
 
 .forgot-form .send-code-button:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #fafafa;
+  color: #1890ff;
+  border-color: #1890ff;
 }
 
 .forgot-form .send-code-button:disabled {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.5);
+  background: #f5f5f5;
+  color: #bfbfbf;
   cursor: not-allowed;
 }
 
@@ -475,61 +468,56 @@ const switchForm = (form) => {
 .label {
   display: block;
   margin-bottom: 10px;
-  color: #ffffff;
-  font-weight: 500;
+  color: #333;
+  font-weight: 400;
 }
 
 .input-field {
   width: 100%;
   padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid #d9d9d9;
   border-radius: 6px;
   font-size: 16px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  transition: all 0.3s ease;
+  background: #fff;
+  color: #333;
 }
 
 .input-field::placeholder {
-  color: rgba(255, 255, 255, 0.7);
+  color: #bfbfbf;
 }
 
 .input-field:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
 }
 
 .checkbox-group {
   margin-bottom: 25px;
-  color: #ffffff;
+  color: #333;
   display: flex;
   align-items: center;
 }
 
 .checkbox {
   margin-right: 10px;
-  transform: scale(1.2);
 }
 
 .login-button {
   width: 100%;
   padding: 15px;
-  background: rgba(255, 255, 255, 0.2);
+  background: #1890ff;
   color: white;
   border: none;
   border-radius: 6px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
-  transition: all 0.3s ease;
   margin-bottom: 20px;
 }
 
 .login-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  background: #40a9ff;
 }
 
 .links {
@@ -539,16 +527,14 @@ const switchForm = (form) => {
 
 .link {
   margin: 0 10px;
-  color: #ffffff;
+  color: #1890ff;
   text-decoration: none;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 .link:hover {
   text-decoration: underline;
-  color: rgba(255, 255, 255, 0.8);
 }
 
 .verification-code-group {
@@ -562,23 +548,24 @@ const switchForm = (form) => {
 
 .send-code-button {
   padding: 0 15px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
+  background: #fafafa;
+  color: #333;
+  border: 1px solid #d9d9d9;
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
   white-space: nowrap;
 }
 
 .send-code-button:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #fafafa;
+  color: #1890ff;
+  border-color: #1890ff;
 }
 
 .send-code-button:disabled {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.5);
+  background: #f5f5f5;
+  color: #bfbfbf;
   cursor: not-allowed;
 }
 </style>

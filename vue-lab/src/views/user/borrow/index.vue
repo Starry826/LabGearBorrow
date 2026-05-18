@@ -91,7 +91,49 @@ const getCategoryText = (category) => {
 // 格式化时间显示
 const formatTime = (time) => {
   if (!time) return "-";
-  return new Date(time).toLocaleString("zh-CN");
+  
+  let date;
+  
+  // 如果已经是Date对象
+  if (time instanceof Date) {
+    date = time;
+  } else {
+    // 尝试解析时间字符串或时间戳
+    try {
+      // 如果是数字（时间戳）
+      if (typeof time === 'number') {
+        date = new Date(time);
+      } else {
+        // 如果是字符串
+        const timeStr = String(time);
+        // 检查是否是ISO格式
+        if (timeStr.includes('T') || timeStr.includes('-')) {
+          date = new Date(timeStr);
+        } else {
+          // 尝试作为时间戳解析
+          date = new Date(parseInt(timeStr));
+        }
+      }
+    } catch (e) {
+      console.error('日期解析错误:', e, time);
+      return "-";
+    }
+  }
+  
+  // 验证日期有效性
+  if (isNaN(date.getTime())) {
+    console.error('无效的日期值:', time);
+    return "-";
+  }
+  
+  // 格式化输出
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hour}:${minute}`;
 };
 
 // 获取显示的归还时间
