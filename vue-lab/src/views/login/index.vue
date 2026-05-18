@@ -181,12 +181,6 @@ const switchForm = (form) => {
           required
         />
       </div>
-      <div class="checkbox-group">
-        <label>
-          <input type="checkbox" v-model="rememberMe" class="checkbox" />
-          保持登录
-        </label>
-      </div>
       <button type="submit" class="login-button">登录</button>
       <div class="links">
         <a @click.prevent="switchForm('forgot')" class="link">忘记密码？</a>
