@@ -90,59 +90,78 @@ const getCategoryText = (category) => {
 
 // 格式化时间显示
 const formatTime = (time) => {
+  // 处理各种情况
   if (!time) return "-";
+  if (time === null) return "-";
+  if (time === undefined) return "-";
   
   let date;
   
-  // 如果已经是Date对象
-  if (time instanceof Date) {
-    date = time;
-  } else {
-    // 尝试解析时间字符串或时间戳
-    try {
-      // 如果是数字（时间戳）
-      if (typeof time === 'number') {
-        date = new Date(time);
-      } else {
-        // 如果是字符串
-        const timeStr = String(time);
-        // 检查是否是ISO格式
-        if (timeStr.includes('T') || timeStr.includes('-')) {
-          date = new Date(timeStr);
-        } else {
-          // 尝试作为时间戳解析
-          date = new Date(parseInt(timeStr));
+  try {
+    // 情况1：是数组格式 [年, 月, 日, 时, 分, 秒]
+    if (Array.isArray(time)) {
+      // JavaScript月份从0开始，所以要减1
+      // 但根据用户数据，月份是1-based（如5表示5月）
+      const [year, month, day, hour = 0, minute = 0, second = 0] = time;
+      date = new Date(year, month - 1, day, hour, minute, second);
+    }
+    // 情况2：已经是Date对象
+    else if (time instanceof Date) {
+      date = time;
+    } 
+    // 情况3：是数字类型（可能是时间戳）
+    else if (typeof time === 'number') {
+      date = new Date(time);
+    }
+    // 情况4：是字符串
+    else {
+      const timeStr = String(time).trim();
+      if (!timeStr) return "-";
+      
+      // 先尝试直接作为Date构造函数的参数
+      date = new Date(timeStr);
+      
+      // 如果无效，尝试其他解析方式
+      if (isNaN(date.getTime())) {
+        // 尝试时间戳（毫秒）
+        const timestamp = parseInt(timeStr);
+        if (!isNaN(timestamp)) {
+          date = new Date(timestamp);
         }
       }
-    } catch (e) {
-      console.error('日期解析错误:', e, time);
+    }
+    
+    // 最终验证
+    if (!date || isNaN(date.getTime())) {
+      console.warn('日期解析失败:', time);
       return "-";
     }
-  }
-  
-  // 验证日期有效性
-  if (isNaN(date.getTime())) {
-    console.error('无效的日期值:', time);
+    
+    // 使用toLocaleString格式化
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+  } catch (e) {
+    console.error('日期格式化异常:', e, time);
     return "-";
   }
-  
-  // 格式化输出
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hour = String(date.getHours()).padStart(2, '0');
-  const minute = String(date.getMinutes()).padStart(2, '0');
-  
-  return `${year}-${month}-${day} ${hour}:${minute}`;
 };
 
 // 获取显示的归还时间
 const getDisplayReturnTime = (item) => {
   // 只有在"已归还"页面且状态为已归还时，才显示实际归还时间
   if (activeStatus.value === '已归还' && item.status === 3) {
+    if (!item.actualReturnTime) return '-';
     return formatTime(item.actualReturnTime);
   }
   // 其他情况都显示预计归还时间
+  if (!item.expectedReturnTime) return '-';
   return formatTime(item.expectedReturnTime);
 };
 
@@ -243,6 +262,8 @@ onMounted(() => {
           <div class="col-name">
             <div class="equipment-name">{{ item.equipmentName }}</div>
             <div class="record-id">记录ID: {{ item.id }}</div>
+            <!-- 调试用 - 可以删除 -->
+            <div class="debug-info" style="display:none;">原始数据: {{ item.borrowTime }} - {{ item.expectedReturnTime }}</div>
           </div>
           <div class="col-category">
             {{ getCategoryText(item.equipmentCategory) }}
@@ -252,7 +273,7 @@ onMounted(() => {
             {{ formatTime(item.borrowTime) }}
           </div>
           <div class="col-return-time">
-            {{ getDisplayReturnTime(item) }}
+            {{ item.borrowTime ? getDisplayReturnTime(item) : '-' }}
           </div>
           <div class="col-status">
             <span :class="['status-badge', getStatusClass(item.status)]">

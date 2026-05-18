@@ -252,50 +252,67 @@ const viewDetail = (borrowRecord) => {
 
 // 格式化日期
 const formatDate = (dateString) => {
+  // 处理各种情况
   if (!dateString) return '-';
+  if (dateString === null) return '-';
+  if (dateString === undefined) return '-';
   
   let date;
   
-  // 如果已经是Date对象
-  if (dateString instanceof Date) {
-    date = dateString;
-  } else {
-    // 尝试解析时间字符串或时间戳
-    try {
-      // 如果是数字（时间戳）
-      if (typeof dateString === 'number') {
-        date = new Date(dateString);
-      } else {
-        // 如果是字符串
-        const timeStr = String(dateString);
-        // 检查是否是ISO格式
-        if (timeStr.includes('T') || timeStr.includes('-')) {
-          date = new Date(timeStr);
-        } else {
-          // 尝试作为时间戳解析
-          date = new Date(parseInt(timeStr));
+  try {
+    // 情况1：是数组格式 [年, 月, 日, 时, 分, 秒]
+    if (Array.isArray(dateString)) {
+      // JavaScript月份从0开始，所以要减1
+      // 但根据用户数据，月份是1-based（如5表示5月）
+      const [year, month, day, hour = 0, minute = 0, second = 0] = dateString;
+      date = new Date(year, month - 1, day, hour, minute, second);
+    }
+    // 情况2：已经是Date对象
+    else if (dateString instanceof Date) {
+      date = dateString;
+    } 
+    // 情况3：是数字类型（可能是时间戳）
+    else if (typeof dateString === 'number') {
+      date = new Date(dateString);
+    }
+    // 情况4：是字符串
+    else {
+      const timeStr = String(dateString).trim();
+      if (!timeStr) return '-';
+      
+      // 先尝试直接作为Date构造函数的参数
+      date = new Date(timeStr);
+      
+      // 如果无效，尝试其他解析方式
+      if (isNaN(date.getTime())) {
+        // 尝试时间戳（毫秒）
+        const timestamp = parseInt(timeStr);
+        if (!isNaN(timestamp)) {
+          date = new Date(timestamp);
         }
       }
-    } catch (e) {
-      console.error('日期解析错误:', e, dateString);
-      return '-';
     }
+    
+    // 最终验证
+    if (!date || isNaN(date.getTime())) {
+      console.warn('日期解析失败:', dateString);
+      return "-";
+    }
+    
+    // 使用toLocaleString格式化
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+  } catch (e) {
+    console.error('日期格式化异常:', e, dateString);
+    return "-";
   }
-  
-  // 验证日期有效性
-  if (isNaN(date.getTime())) {
-    console.error('无效的日期值:', dateString);
-    return '-';
-  }
-  
-  // 格式化输出
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hour = String(date.getHours()).padStart(2, '0');
-  const minute = String(date.getMinutes()).padStart(2, '0');
-  
-  return `${year}-${month}-${day} ${hour}:${minute}`;
 };
 
 onMounted(() => {
