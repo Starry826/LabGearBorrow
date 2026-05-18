@@ -47,10 +47,10 @@ public class UserController {
         if (userService.updateEmail(email,userId) != 0) {
             return Result.success();
         }
-        return Result.error("密码错误");
+        return Result.error("验证码错误");
     }
     //上传头像
-    @PutMapping("/upload")
+    @PostMapping("/upload")
     public Result upload(@RequestParam("file") MultipartFile file, @RequestHeader("Id") Integer userId) throws IOException {
         if (userService.upload(userId,file) > 0){
             return Result.success();
@@ -93,11 +93,10 @@ public class UserController {
         return Result.error("删除用户失败");
     }
     // 管理员修改头像
-    @PutMapping("/allUpload/{id}")
-    public Result allUpload(@RequestParam("file") MultipartFile file, @RequestParam("id") Integer userId) throws IOException {
+    @PostMapping("/allUpload/{id}")
+    public Result allUpload(@RequestParam("file") MultipartFile file, @PathVariable("id") Integer userId) throws IOException {
         if (userService.upload(userId,file) > 0){
             return Result.success();
-
         }
         return Result.error("修改头像失败");
     }

@@ -16,6 +16,8 @@ import java.util.UUID;
 public class UserService {
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private EmailService emailService;
 
     public User getById(Integer id) {
         User u = userMapper.getById(id);
@@ -40,16 +42,15 @@ public class UserService {
         }
         return 0;
     }
+
     //修改邮箱
     public Integer updateEmail(Map<String, String> email, Integer userId){
+        String newEmail = email.get("newEmail");
+
         User u = new User();
         u.setId(userId);
-        u.setPassword(email.get("password"));
-        if (userMapper.validateIdAndPassword(u) > 0){
-            u.setEmail(email.get("newEmail"));
-            return userMapper.updateEmail(u);
-        }
-        return 0;
+        u.setEmail(newEmail);
+        return userMapper.updateEmail(u);
     }
     //上传头像
     public Integer upload(Integer userId, MultipartFile file) throws IOException {
@@ -57,8 +58,8 @@ public class UserService {
         String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         String newFileName = UUID.randomUUID().toString() + extension;
 
-        // 容器内的保存目录（对应宿主机 ~/nginx/html/images）
-        String uploadDir = "/app/images";
+        // 保存到前端public/images目录
+        String uploadDir = System.getProperty("user.dir") + "/vue-lab/public/images";
         File dir = new File(uploadDir);
         if (!dir.exists()) {
             dir.mkdirs();
@@ -68,7 +69,7 @@ public class UserService {
         File dest = new File(dir, newFileName);
         file.transferTo(dest);
 
-        // 返回给前端的 URL，Nginx 直接提供
+        // 返回给前端的 URL
         String path = "/images/" + newFileName;
         return userMapper.avatar(userId, path);
     }

@@ -17,6 +17,9 @@ request.interceptors.request.use(
             config.headers.id = loginUser.id;
             config.headers.token = loginUser.token;
         }
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type']
+        }
         return config
     },
     (error) =>{

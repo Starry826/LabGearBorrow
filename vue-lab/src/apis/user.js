@@ -30,8 +30,12 @@ export const UserAPI = {
   updatePassword: (data) => request.put('/user/update/password', data ),
   // 修改邮箱
   updateEmail: (data) => request.put('/user/update/email', data ),
+  // 发送邮箱验证码
+  sendEmailCode: (data) => request.post('/email/sendVerificationCode', data ),
+  // 验证邮箱验证码
+  verifyEmailCode: (data) => request.post('/email/verifyCode', data ),
   // 上传头像
-  upload: (data) => request.put('/user/upload', data ),
+  upload: (data) => request.post('/user/upload', data ),
 
 }
 

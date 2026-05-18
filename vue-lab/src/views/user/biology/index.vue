@@ -4,37 +4,31 @@ import { equipmentAPI } from '@/apis/user';
 import { ElMessage } from 'element-plus';
 
 const lists = ref([]);
-const activeCategory = ref('全部'); // 当前选中的分类
-const loading = ref(false); // 加载状态
-const dialogVisible = ref(false); // 对话框显示状态
-const selectedEquipment = ref(null); // 选中的设备信息
-const borrowDays = ref(60); // 借用天数，默认60天
+const activeCategory = ref('全部');
+const loading = ref(false);
+const dialogVisible = ref(false);
+const selectedEquipment = ref(null);
+const borrowDays = ref(60);
 
-// 分类选项
 const categories = [
   { id: '全部', name: '全部' },
   { id: '显微镜', name: '显微镜' },
   { id: '培养设备', name: '培养设备' },
-  { id: '解剖工具', name: '解剖工具' },
-  { id: '无菌设备', name: '无菌设备' },
-  { id: '标本制作工具', name: '标本制作工具' }
+  { id: '解剖器材', name: '解剖器材' },
+  { id: '染色设备', name: '染色设备' }
 ];
 
-// 小类映射
 const subCategoryMap = {
   1: '显微镜',
   2: '培养设备',
-  3: '解剖工具',
-  4: '无菌设备',
-  5: '标本制作工具'
+  3: '解剖器材',
+  4: '染色设备'
 };
 
-// 获取数据
 const fetchData = async () => {
   try {
     loading.value = true;
     const result = await equipmentAPI.getAll({ category: "3" });
-    // 根据 physicsAPI 的响应结构调整
     if (result && result.data) {
       lists.value = result.data;
     }
@@ -45,7 +39,6 @@ const fetchData = async () => {
   }
 };
 
-// 根据分类筛选设备
 const filteredLists = computed(() => {
   if (activeCategory.value === '全部') {
     return lists.value;
@@ -55,39 +48,27 @@ const filteredLists = computed(() => {
   );
 });
 
-// 切换分类
 const switchCategory = (category) => {
   activeCategory.value = category;
 };
 
-// 获取小类名称
 const getSubCategoryName = (subCategoryId) => {
   return subCategoryMap[subCategoryId] || '未知分类';
 };
 
-// 打开借用对话框
 const openBorrowDialog = (equipment) => {
   selectedEquipment.value = equipment;
   dialogVisible.value = true;
 };
 
-// 处理支付
 const handlePayment = async () => {
   try {
-    // 调用借用API
     const response = await equipmentAPI.borrow(selectedEquipment.value.id);
-    // 判断后端返回的code是否表示成功
-    if (response.code === 0) { // 根据实际后端返回的成功code调整
-      // 支付成功
+    if (response.code === 0) {
       ElMessage.success('支付成功！设备借用申请已提交');
-      
-      // 关闭对话框
       dialogVisible.value = false;
-      
-      // 刷新设备列表
       fetchData();
     } else {
-      // 后端返回了错误
       ElMessage.error(response.message);
     }
   } catch (error) {
@@ -102,13 +83,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="physics-equipment">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1 class="page-title">生物实验室设备</h1>
-    </div>
-
-    <!-- 分类导航 -->
+  <div class="equipment-page">
     <div class="category-nav">
       <div 
         v-for="category in categories" 
@@ -120,20 +95,17 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
       <p>正在加载设备数据...</p>
     </div>
 
-    <!-- 设备列表 -->
     <div v-else class="equipment-list">
       <div v-if="filteredLists.length === 0" class="empty-state">
         <p>暂无设备数据</p>
       </div>
       
       <div v-else class="equipment-table">
-        <!-- 表头 -->
         <div class="table-header">
           <div class="col-name">设备名称</div>
           <div class="col-category">设备分类</div>
@@ -144,7 +116,6 @@ onMounted(() => {
           <div class="col-actions">操作</div>
         </div>
         
-        <!-- 设备行 -->
         <div 
           v-for="item in filteredLists" 
           :key="item.id"
@@ -172,7 +143,6 @@ onMounted(() => {
             ￥{{ item.deposit }}
           </div>
           <div class="col-actions">
-            <!-- <button class="btn-detail">查看详情</button> -->
             <button 
               class="btn-borrow" 
               :disabled="item.availableQuantity <= 0"
@@ -185,7 +155,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 借用对话框 -->
     <el-dialog
       v-model="dialogVisible"
       title="设备借用确认"
@@ -232,74 +201,68 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.physics-equipment {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+.equipment-page {
+  padding: 0;
 }
 
 .page-header {
-  text-align: center;
   margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #262626;
+  margin: 0;
 }
 
-.page-description {
-  color: #7f8c8d;
-  font-size: 16px;
-}
-
-/* 分类导航样式 */
 .category-nav {
   display: flex;
-  justify-content: center;
-  margin-bottom: 30px;
-  border-bottom: 1px solid #eaeaea;
-  padding-bottom: 10px;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .category-item {
   padding: 10px 20px;
-  margin: 0 5px;
-  border-radius: 20px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s;
   font-weight: 500;
-  color: #555;
+  font-size: 14px;
+  color: #595959;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
 }
 
 .category-item:hover {
-  background-color: #f0f0f0;
+  color: #1890ff;
 }
 
 .category-item.active {
-  background-color: #409eff;
-  color: white;
+  color: #1890ff;
+  border-bottom-color: #1890ff;
 }
 
-/* 加载状态样式 */
 .loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 50px 0;
+  padding: 60px 0;
+  color: #8c8c8c;
+  font-size: 14px;
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #409eff;
+  width: 36px;
+  height: 36px;
+  border: 3px solid #f5f5f5;
+  border-top: 3px solid #1890ff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 @keyframes spin {
@@ -307,11 +270,10 @@ onMounted(() => {
   100% { transform: rotate(360deg); }
 }
 
-/* 表格样式 */
 .equipment-table {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f0f0f0;
   overflow: hidden;
 }
 
@@ -319,25 +281,27 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
   gap: 10px;
-  padding: 15px 20px;
-  background-color: #f8f9fa;
+  padding: 14px 20px;
+  background-color: #fafafa;
   font-weight: 600;
-  color: #495057;
-  border-bottom: 1px solid #e9ecef;
+  color: #262626;
+  font-size: 14px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .equipment-row {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
   gap: 10px;
-  padding: 15px 20px;
-  border-bottom: 1px solid #e9ecef;
-  transition: background-color 0.2s ease;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background-color 0.2s;
   align-items: center;
+  font-size: 14px;
 }
 
 .equipment-row:hover {
-  background-color: #f8f9fa;
+  background-color: #fafafa;
 }
 
 .equipment-row:last-child {
@@ -350,21 +314,21 @@ onMounted(() => {
 }
 
 .equipment-name {
-  font-weight: 600;
-  color: #2c3e50;
+  font-weight: 500;
+  color: #262626;
   margin-bottom: 4px;
 }
 
 .equipment-id {
   font-size: 12px;
-  color: #6c757d;
+  color: #8c8c8c;
 }
 
 .col-category,
 .col-quantity,
 .col-deposit,
 .col-available {
-  color: #495057;
+  color: #595959;
 }
 
 .col-status {
@@ -375,19 +339,19 @@ onMounted(() => {
 .status-badge {
   display: inline-block;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
 }
 
 .status-badge.available {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  background-color: #f6ffed;
+  color: #52c41a;
 }
 
 .status-badge.unavailable {
-  background-color: #ffebee;
-  color: #c62828;
+  background-color: #fff2f0;
+  color: #ff4d4f;
 }
 
 .col-actions {
@@ -396,49 +360,35 @@ onMounted(() => {
   justify-content: center;
 }
 
-.btn-detail,
 .btn-borrow {
-  padding: 8px 16px;
+  padding: 6px 16px;
   border: none;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-detail {
-  background-color: #f5f5f5;
-  color: #333;
-}
-
-.btn-detail:hover {
-  background-color: #e0e0e0;
-}
-
-.btn-borrow {
-  background-color: #409eff;
+  transition: background 0.3s;
+  background-color: #1890ff;
   color: white;
   white-space: nowrap;
 }
 
 .btn-borrow:hover:not(:disabled) {
-  background-color: #66b1ff;
+  background-color: #40a9ff;
 }
 
 .btn-borrow:disabled {
-  background-color: #c0c4cc;
+  background-color: #d9d9d9;
   cursor: not-allowed;
 }
 
-/* 空状态样式 */
 .empty-state {
   text-align: center;
-  padding: 50px 0;
-  color: #7f8c8d;
+  padding: 60px 0;
+  color: #8c8c8c;
+  font-size: 14px;
 }
 
-/* 借用对话框样式 */
 .borrow-dialog {
   padding: 10px 0;
 }
@@ -448,57 +398,52 @@ onMounted(() => {
   justify-content: space-between;
   margin-bottom: 15px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f5f5f5;
 }
 
 .dialog-item .label {
-  font-weight: 600;
-  color: #606266;
+  font-weight: 500;
+  color: #595959;
 }
 
 .dialog-item .value {
-  color: #303133;
+  color: #262626;
 }
 
 .dialog-item .price {
   font-weight: 600;
-  color: #e6a23c;
+  color: #faad14;
   font-size: 18px;
 }
 
 .dialog-tips {
   margin-top: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 6px;
 }
 
 .dialog-tips p {
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 10px;
-  color: #606266;
+  color: #595959;
 }
 
 .dialog-tips ul {
   margin: 0;
   padding-left: 20px;
-  color: #909399;
+  color: #8c8c8c;
 }
 
 .dialog-tips li {
   margin-bottom: 5px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
   .category-nav {
     flex-wrap: wrap;
-  }
-  
-  .category-item {
-    margin-bottom: 10px;
   }
   
   .table-header {
@@ -509,7 +454,7 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     padding: 15px;
-    border: 1px solid #e9ecef;
+    border: 1px solid #f0f0f0;
     border-radius: 8px;
     margin-bottom: 10px;
   }
@@ -525,7 +470,7 @@ onMounted(() => {
     justify-content: space-between;
     width: 100%;
     padding: 8px 0;
-    border-bottom: 1px solid #f1f1f1;
+    border-bottom: 1px solid #f5f5f5;
   }
   
   .col-name::before { content: "设备名称: "; font-weight: 600; }
@@ -543,18 +488,8 @@ onMounted(() => {
     padding-top: 12px;
   }
   
-  .col-actions::before {
-    margin-bottom: 5px;
-  }
-  
   .btn-borrow {
     width: 100%;
-  }
-}
-
-@media (max-width: 576px) {
-  .physics-equipment {
-    padding: 15px;
   }
 }
 </style>

@@ -1,758 +1,543 @@
 <script setup>
-import { ref, onMounted } from "vue";
-import { UserAPI } from "@/apis/user";
-import { ElMessage } from "element-plus";
-import router from "@/router";
+import { ref, onMounted } from 'vue'
+import { UserAPI } from '@/apis/user'
+import { ElMessage } from 'element-plus'
 
-// 用户信息
 const userInfo = ref({
-  username: "",
-  email: "",
-  avatar: "",
-});
+  id: null,
+  username: '',
+  email: '',
+  avatar: '',
+  role: 1
+})
 
-// 修改用户名表单
-const usernameForm = ref({
-  newUsername: "",
-});
+const usernameDialogVisible = ref(false)
+const emailDialogVisible = ref(false)
+const passwordDialogVisible = ref(false)
+const avatarInput = ref(null)
 
-// 修改密码表单
+const usernameForm = ref({ username: '' })
+const emailForm = ref({ email: '', code: '' })
+const emailCodeCountdown = ref(0)
+const emailCodeTimer = ref(null)
 const passwordForm = ref({
-  currentPassword: "",
-  newPassword: "",
-  confirmPassword: "",
-});
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
 
-// 修改邮箱表单
-const emailForm = ref({
-  newEmail: "",
-  password: "",
-});
-
-// 头像上传相关
-const avatarFile = ref(null);
-const avatarPreview = ref(null);
-const isUploading = ref(false);
-
-// 对话框控制
-const showUsernameDialog = ref(false);
-const showPasswordDialog = ref(false);
-const showEmailDialog = ref(false);
-
-// 获取用户信息
-const getUserInfo = async () => {
-  const loginUser = JSON.parse(localStorage.getItem("loginUser"));
-  const response = await UserAPI.user({ id: loginUser.id });
-  userInfo.value = response.data;
-};
-
-// 修改用户名
-const handleUsernameChange = async () => {
-  if (!usernameForm.value.newUsername) {
-    ElMessage.error("请输入新的用户名");
-    return;
+const fetchUserInfo = async () => {
+  try {
+    const response = await UserAPI.user()
+    userInfo.value = response.data
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
   }
+}
 
-  if (usernameForm.value.newUsername.length < 1) {
-    ElMessage.error("用户名至少需要1个字符");
-    return;
-  }
+const handleAvatarClick = () => {
+  avatarInput.value.click()
+}
 
-  // API调用 - 直接传递用户名字符串
-  const result = await UserAPI.updateUsername(usernameForm.value.newUsername);
-  
-  if (result.code !== 0) {
-    ElMessage.error(result.message);
-    return;
-  }
-  // 重置表单
-  usernameForm.value = { newUsername: "" };
-  showUsernameDialog.value = false;
-  
-  router.go(0); // 刷新当前页面         
-};
-
-// 修改密码
-const handlePasswordChange = async () => {
-  if (!passwordForm.value.currentPassword || !passwordForm.value.newPassword) {
-    ElMessage.error("请填写所有必填字段");
-    return;
-  }
-
-  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
-    ElMessage.error("两次输入的密码不一致");
-    return;
-  }
-
-  // 获取当前用户ID
-  const loginUser = JSON.parse(localStorage.getItem("loginUser"));
-  const userId = loginUser.id;
-
-  // 构造正确的参数格式
-  const requestData = {
-    userId: userId,
-    currentPassword: passwordForm.value.currentPassword,
-    newPassword: passwordForm.value.newPassword
-  };
-
-  // API调用
-  const result = await UserAPI.updatePassword(requestData);
-  if (result.code !== 0) {
-    ElMessage.error(result.message);
-    return;
-  }
-  ElMessage.success("密码修改成功");
-
-  passwordForm.value = {
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  };
-  showPasswordDialog.value = false;
-};
-
-// 修改邮箱
-const handleEmailChange = async () => {
-  if (!emailForm.value.newEmail || !emailForm.value.password) {
-    ElMessage.error("请填写所有必填字段");
-    return;
-  }
-
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{3,}$/;
-  if (!emailRegex.test(emailForm.value.newEmail)) {
-    ElMessage.error("请输入正确的邮箱地址");
-    return;
-  }
-
-  // 获取当前用户ID
-  const loginUser = JSON.parse(localStorage.getItem("loginUser"));
-  const userId = loginUser.id;
-
-  // 构造正确的参数格式
-  const requestData = {
-    userId: userId,
-    newEmail: emailForm.value.newEmail,
-    password: emailForm.value.password
-  };
-
-  // API调用
-  const result = await UserAPI.updateEmail(requestData);
-  if (result.code !== 0) {
-    ElMessage.error(result.message);
-    return;
-  }
-  ElMessage.success("邮箱修改成功");
-
-  // 重置表单
-  emailForm.value = { newEmail: "", password: "" };
-  showEmailDialog.value = false;
-
-  //重新获取用户信息以确保数据同步
-  await getUserInfo();
-};
-
-// 头像上传处理
-const handleAvatarUpload = (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
+const handleAvatarChange = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
 
   // 验证文件类型
-  if (!file.type.startsWith("image/")) {
-    ElMessage.error("请选择图片文件");
-    return;
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error('请选择图片文件')
+    event.target.value = ''
+    return
   }
 
   // 验证文件大小 (限制为2MB)
   if (file.size > 2 * 1024 * 1024) {
-    ElMessage.error("图片大小不能超过2MB");
-    return;
+    ElMessage.error('图片大小不能超过2MB')
+    event.target.value = ''
+    return
   }
 
-  avatarFile.value = file;
-
-  // 创建预览
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    avatarPreview.value = e.target.result;
-  };
-  reader.readAsDataURL(file);
-};
-
-// 保存头像
-const saveAvatar = async () => {
-  if (!avatarFile.value) {
-    ElMessage.error("请先选择图片");
-    return;
-  }
-
-  isUploading.value = true;
+  const formData = new FormData()
+  formData.append('file', file)
 
   try {
-    const formData = new FormData();
-    formData.append("file", avatarFile.value);
-
-    const response = await UserAPI.upload(formData);
-
-    if (!response) {
-      ElMessage.error("上传失败：服务器无响应");
-      return;
-    }
-
-    if (response.code === 0) {
-      let newAvatarUrl = null;
-
-      // 尝试从各种可能的字段获取URL
-      if (response.data) {
-        newAvatarUrl =
-          response.data.url ||
-          response.data.avatarUrl ||
-          response.data.avatar ||
-          response.data.imageUrl ||
-          response.data.path;
-      }
-
-      // 如果还是没有找到URL，检查响应根级别
-      if (!newAvatarUrl) {
-        newAvatarUrl = response.url || response.avatarUrl;
-      }
-
-      // 最终使用找到的URL或预览URL
-      userInfo.value.avatar = newAvatarUrl || avatarPreview.value;
-
-      ElMessage.success("头像更新成功！");
-      avatarFile.value = null;
-      avatarPreview.value = null;
-
-      router.go(0); // 刷新当前页面
+    const result = await UserAPI.upload(formData)
+    if (result.code === 0) {
+      ElMessage.success('头像上传成功')
+      window.location.reload()
     } else {
-      ElMessage.error(response.message || "头像上传失败");
+      ElMessage.error(result.message || '头像上传失败')
     }
   } catch (error) {
-    console.error("上传头像失败:", error);
-    ElMessage.error("头像上传失败，请稍后重试");
-  } finally {
-    isUploading.value = false;
+    ElMessage.error('头像上传失败')
   }
-};
 
-// 重置头像上传
-const resetAvatarUpload = () => {
-  avatarFile.value = null;
-  avatarPreview.value = null;
-};
+  event.target.value = ''
+}
+
+const openUsernameDialog = () => {
+  usernameForm.value = { username: userInfo.value.username }
+  usernameDialogVisible.value = true
+}
+
+const handleUsernameSubmit = async () => {
+  if (!usernameForm.value.username.trim()) {
+    ElMessage.error('用户名不能为空')
+    return
+  }
+  try {
+    const result = await UserAPI.updateUsername(usernameForm.value.username)
+    if (result.code === 0) {
+      ElMessage.success('用户名修改成功')
+      usernameDialogVisible.value = false
+      fetchUserInfo()
+    } else {
+      ElMessage.error(result.message || '用户名修改失败')
+    }
+  } catch (error) {
+    ElMessage.error('用户名修改失败')
+  }
+}
+
+const openEmailDialog = () => {
+  emailForm.value = { email: userInfo.value.email, code: '' }
+  emailCodeCountdown.value = 0
+  if (emailCodeTimer.value) {
+    clearInterval(emailCodeTimer.value)
+    emailCodeTimer.value = null
+  }
+  emailDialogVisible.value = true
+}
+
+const handleSendEmailCode = async () => {
+  if (!emailForm.value.email.trim()) {
+    ElMessage.error('请输入邮箱')
+    return
+  }
+  try {
+    const result = await UserAPI.sendEmailCode({ email: emailForm.value.email })
+    if (result.code === 0) {
+      ElMessage.success('验证码已发送')
+      emailCodeCountdown.value = 60
+      emailCodeTimer.value = setInterval(() => {
+        emailCodeCountdown.value--
+        if (emailCodeCountdown.value <= 0) {
+          clearInterval(emailCodeTimer.value)
+          emailCodeTimer.value = null
+        }
+      }, 1000)
+    } else {
+      ElMessage.error(result.message || '验证码发送失败')
+    }
+  } catch (error) {
+    ElMessage.error('验证码发送失败')
+  }
+}
+
+const handleEmailSubmit = async () => {
+  if (!emailForm.value.email.trim()) {
+    ElMessage.error('邮箱不能为空')
+    return
+  }
+  if (!emailForm.value.code.trim()) {
+    ElMessage.error('请输入验证码')
+    return
+  }
+  try {
+    const verifyResult = await UserAPI.verifyEmailCode({
+      email: emailForm.value.email,
+      code: emailForm.value.code
+    })
+    if (verifyResult.code !== 0) {
+      ElMessage.error(verifyResult.message || '验证码错误')
+      return
+    }
+    const result = await UserAPI.updateEmail({
+        newEmail: emailForm.value.email,
+        code: emailForm.value.code
+      })
+    if (result.code === 0) {
+      ElMessage.success('邮箱修改成功')
+      emailDialogVisible.value = false
+      fetchUserInfo()
+    } else {
+      ElMessage.error(result.message || '邮箱修改失败')
+    }
+  } catch (error) {
+    ElMessage.error('邮箱修改失败')
+  }
+}
+
+const openPasswordDialog = () => {
+  passwordForm.value = {
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+  passwordDialogVisible.value = true
+}
+
+const handlePasswordSubmit = async () => {
+  if (!passwordForm.value.oldPassword) {
+    ElMessage.error('请输入原密码')
+    return
+  }
+  if (!passwordForm.value.newPassword) {
+    ElMessage.error('请输入新密码')
+    return
+  }
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    ElMessage.error('两次输入的密码不一致')
+    return
+  }
+  try {
+    const result = await UserAPI.updatePassword({
+      oldPassword: passwordForm.value.oldPassword,
+      newPassword: passwordForm.value.newPassword
+    })
+    if (result.code === 0) {
+      ElMessage.success('密码修改成功')
+      passwordDialogVisible.value = false
+      passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+    } else {
+      ElMessage.error(result.message || '密码修改失败')
+    }
+  } catch (error) {
+    ElMessage.error('密码修改失败')
+  }
+}
+
+const getAvatarPlaceholder = (username) => {
+  return username ? username.charAt(0).toUpperCase() : '?'
+}
+
+const getRoleName = (role) => {
+  return role === 0 ? '管理员' : '普通用户'
+}
 
 onMounted(() => {
-  getUserInfo();
-});
+  fetchUserInfo()
+})
 </script>
 
 <template>
-  <div class="profile-container">
-    <div class="profile-header">
-      <h1>个人中心</h1>
-    </div>
-
+  <div class="profile-page">
     <div class="profile-content">
-      <!-- 左侧 - 个人信息卡片（缩小版） -->
-      <div class="profile-card compact">
-        <div class="avatar-section">
-          <div class="avatar-container">
-            <img :src="userInfo.avatar" alt="用户头像" class="avatar" />
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="avatar-section" @click="handleAvatarClick">
+            <img
+              v-if="userInfo.avatar"
+              :src="userInfo.avatar"
+              alt="头像"
+              class="avatar-img"
+            />
+            <div v-else class="avatar-placeholder">
+              {{ getAvatarPlaceholder(userInfo.username) }}
+            </div>
+            <div class="avatar-overlay">
+              <span>点击修改</span>
+            </div>
+            <input
+              ref="avatarInput"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              @change="handleAvatarChange"
+            />
           </div>
-          <input
-            type="file"
-            ref="avatarInput"
-            accept="image/*"
-            @change="handleAvatarUpload"
-            style="display: none"
-          />
-
-          <h2>{{ userInfo.username }}</h2>
-          <p>{{ userInfo.email }}</p>
-
-          <button class="btn btn-primary" @click="$refs.avatarInput.click()">
-            更换头像
-          </button>
+          <div class="info-section">
+            <h2 class="username">{{ userInfo.username }}</h2>
+            <p class="email">{{ userInfo.email }}</p>
+            <span class="role-badge">{{ getRoleName(userInfo.role) }}</span>
+          </div>
         </div>
-      </div>
 
-      <!-- 右侧 - 设置区域（保持不变） -->
-      <div class="settings-section">
-        <div class="settings-card">
-          <h3>账户设置</h3>
-
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>修改用户名</h4>
-              <p>更新您的显示名称</p>
-            </div>
-            <button class="btn btn-outline" @click="showUsernameDialog = true">
-              修改用户名
-            </button>
+        <div class="profile-body">
+          <div class="info-item">
+            <span class="label">用户名</span>
+            <span class="value">{{ userInfo.username }}</span>
           </div>
-
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>修改密码</h4>
-              <p>定期更改密码以提高账户安全性</p>
-            </div>
-            <button class="btn btn-outline" @click="showPasswordDialog = true">
-              修改密码
-            </button>
+          <div class="info-item">
+            <span class="label">邮箱</span>
+            <span class="value">{{ userInfo.email }}</span>
           </div>
-
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>修改邮箱</h4>
-              <p>更新您的联系邮箱地址</p>
-            </div>
-            <button class="btn btn-outline" @click="showEmailDialog = true">
-              修改邮箱
-            </button>
+          <div class="info-item">
+            <span class="label">角色</span>
+            <span class="value">{{ getRoleName(userInfo.role) }}</span>
           </div>
+        </div>
+
+        <div class="profile-footer">
+          <button class="btn-edit" @click="openUsernameDialog">修改用户名</button>
+          <button class="btn-edit" @click="openEmailDialog">修改邮箱</button>
+          <button class="btn-password" @click="openPasswordDialog">修改密码</button>
         </div>
       </div>
     </div>
 
-    <!-- 头像上传预览模态框 -->
-    <div v-if="avatarPreview" class="modal-overlay">
-      <div class="modal">
-        <div class="modal-header">
-          <h3>预览新头像</h3>
-          <button class="close-btn" @click="resetAvatarUpload">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="avatar-preview">
-            <img :src="avatarPreview" alt="新头像预览" />
+    <el-dialog
+      v-model="usernameDialogVisible"
+      title="修改用户名"
+      width="400px"
+    >
+      <el-form :model="usernameForm" label-width="80px">
+        <el-form-item label="用户名">
+          <el-input v-model="usernameForm.username" placeholder="请输入新用户名" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="usernameDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleUsernameSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="emailDialogVisible"
+      title="修改邮箱"
+      width="400px"
+    >
+      <el-form :model="emailForm" label-width="80px">
+        <el-form-item label="新邮箱">
+          <el-input v-model="emailForm.email" placeholder="请输入新邮箱" />
+        </el-form-item>
+        <el-form-item label="验证码">
+          <div class="code-input-group">
+            <el-input v-model="emailForm.code" placeholder="请输入验证码" />
+            <el-button
+              :disabled="emailCodeCountdown > 0"
+              @click="handleSendEmailCode"
+            >
+              {{ emailCodeCountdown > 0 ? emailCodeCountdown + '秒后重发' : '发送验证码' }}
+            </el-button>
           </div>
-          <p>确认使用此图片作为您的新头像吗？</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="resetAvatarUpload">
-            取消
-          </button>
-          <button
-            class="btn btn-primary"
-            @click="saveAvatar"
-            :disabled="isUploading"
-          >
-            <span v-if="isUploading" class="loading"></span>
-            {{ isUploading ? "上传中..." : "确认使用" }}
-          </button>
-        </div>
-      </div>
-    </div>
+        </el-form-item>
+      </el-form>
 
-    <!-- 修改用户名模态框 -->
-    <div v-if="showUsernameDialog" class="modal-overlay">
-      <div class="modal">
-        <div class="modal-header">
-          <h3>修改用户名</h3>
-          <button class="close-btn" @click="showUsernameDialog = false">×</button>
-        </div>
-        <div class="modal-body">
-          <form @submit.prevent="handleUsernameChange">
-            <div class="form-group">
-              <label for="newUsername">新用户名</label>
-              <input
-                type="text"
-                id="newUsername"
-                v-model="usernameForm.newUsername"
-                placeholder="请输入新的用户名"
-                required
-              />
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="showUsernameDialog = false">
-            取消
-          </button>
-          <button class="btn btn-primary" @click="handleUsernameChange">
-            确认修改
-          </button>
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <el-button @click="emailDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleEmailSubmit">确定</el-button>
+      </template>
+    </el-dialog>
 
-    <!-- 修改密码模态框 -->
-    <div v-if="showPasswordDialog" class="modal-overlay">
-      <div class="modal">
-        <div class="modal-header">
-          <h3>修改密码</h3>
-          <button class="close-btn" @click="showPasswordDialog = false">
-            ×
-          </button>
-        </div>
-        <div class="modal-body">
-          <form @submit.prevent="handlePasswordChange">
-            <div class="form-group">
-              <label for="currentPassword">当前密码</label>
-              <input
-                type="password"
-                id="currentPassword"
-                v-model="passwordForm.currentPassword"
-                placeholder="请输入当前密码"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="newPassword">新密码</label>
-              <input
-                type="password"
-                id="newPassword"
-                v-model="passwordForm.newPassword"
-                placeholder="请输入新密码"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="confirmPassword">确认新密码</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                v-model="passwordForm.confirmPassword"
-                placeholder="请再次输入新密码"
-                required
-              />
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="showPasswordDialog = false">
-            取消
-          </button>
-          <button class="btn btn-primary" @click="handlePasswordChange">
-            确认修改
-          </button>
-        </div>
-      </div>
-    </div>
+    <el-dialog
+      v-model="passwordDialogVisible"
+      title="修改密码"
+      width="400px"
+    >
+      <el-form :model="passwordForm" label-width="100px">
+        <el-form-item label="原密码">
+          <el-input v-model="passwordForm.oldPassword" type="password" placeholder="请输入原密码" />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input v-model="passwordForm.newPassword" type="password" placeholder="请输入新密码" />
+        </el-form-item>
+        <el-form-item label="确认密码">
+          <el-input v-model="passwordForm.confirmPassword" type="password" placeholder="请再次输入新密码" />
+        </el-form-item>
+      </el-form>
 
-    <!-- 修改邮箱模态框 -->
-    <div v-if="showEmailDialog" class="modal-overlay">
-      <div class="modal">
-        <div class="modal-header">
-          <h3>修改邮箱</h3>
-          <button class="close-btn" @click="showEmailDialog = false">×</button>
-        </div>
-        <div class="modal-body">
-          <form @submit.prevent="handleEmailChange">
-            <div class="form-group">
-              <label for="newEmail">新邮箱地址</label>
-              <input
-                type="email"
-                id="newEmail"
-                v-model="emailForm.newEmail"
-                placeholder="请输入新的邮箱地址"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="password">当前密码</label>
-              <input
-                type="password"
-                id="password"
-                v-model="emailForm.password"
-                placeholder="请输入当前密码以验证"
-                required
-              />
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="showEmailDialog = false">
-            取消
-          </button>
-          <button class="btn btn-primary" @click="handleEmailChange">
-            确认修改
-          </button>
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handlePasswordSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.profile-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 1rem;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.profile-header {
-  text-align: center;
-  margin-bottom: 1rem;
-  padding-top: 0.5rem;
-}
-
-.profile-header h1 {
-  font-size: 1.8rem;
-  color: #2c3e50;
-  margin: 0;
+.profile-page {
+  padding: 0;
 }
 
 .profile-content {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 1.5rem;
-  flex: 1;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-@media (max-width: 768px) {
-  .profile-content {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* 个人信息卡片样式 - 缩小版 */
-.profile-card.compact {
+.profile-card {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 1.2rem;
-  text-align: center;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.profile-header {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: fit-content;
+  align-items: center;
+  gap: 20px;
+  padding: 30px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
 }
 
 .avatar-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+  cursor: pointer;
 }
 
-.avatar-container {
-  margin-bottom: 0.8rem;
-}
-
-.avatar {
-  width: 90px;
-  height: 90px;
+.avatar-img {
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #e9ecef;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.avatar-section h2 {
-  font-size: 1.2rem;
-  color: #2c3e50;
-  margin-bottom: 0.3rem;
-}
-
-.avatar-section p {
-  color: #7f8c8d;
-  margin-bottom: 1.2rem;
-  font-size: 0.85rem;
-}
-
-/* 设置区域样式（保持不变） */
-.settings-card {
+.avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
-}
-
-.settings-card h3 {
-  font-size: 1.3rem;
-  color: #2c3e50;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.setting-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.2rem 0;
-  border-bottom: 1px solid #f8f9fa;
-}
-
-.setting-item:last-child {
-  border-bottom: none;
-}
-
-.setting-info h4 {
-  font-size: 1.1rem;
-  color: #2c3e50;
-  margin-bottom: 0.25rem;
-}
-
-.setting-info p {
-  color: #7f8c8d;
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-/* 按钮样式 */
-.btn {
-  padding: 0.6rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: 28px;
+  font-weight: 600;
+  color: #8c8c8c;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.btn-primary {
-  background: #3498db;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #2980b9;
-  transform: translateY(-2px);
-}
-
-.btn-outline {
-  background: transparent;
-  color: #3498db;
-  border: 1px solid #3498db;
-}
-
-.btn-outline:hover {
-  background: #3498db;
-  color: white;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* 模态框样式 */
-.modal-overlay {
-  position: fixed;
+.avatar-overlay {
+  position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
-.modal {
-  background: white;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 450px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
+.avatar-overlay span {
+  color: white;
+  font-size: 12px;
 }
 
-.modal-header {
+.avatar-section:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.info-section {
+  flex: 1;
+}
+
+.username {
+  font-size: 20px;
+  font-weight: 600;
+  color: #262626;
+  margin: 0 0 8px 0;
+}
+
+.email {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin: 0 0 10px 0;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #e6f7ff;
+  color: #1890ff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.profile-body {
+  padding: 20px 30px;
+}
+
+.info-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.2rem;
-  border-bottom: 1px solid #e9ecef;
+  padding: 14px 0;
+  border-bottom: 1px solid #f5f5f5;
 }
 
-.modal-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 1.2rem;
+.info-item:last-child {
+  border-bottom: none;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #7f8c8d;
+.label {
+  font-size: 14px;
+  color: #8c8c8c;
 }
 
-.close-btn:hover {
-  color: #2c3e50;
+.value {
+  font-size: 14px;
+  color: #262626;
+  font-weight: 500;
 }
 
-.modal-body {
-  padding: 1.2rem;
-}
-
-.modal-footer {
-  padding: 1.2rem;
-  border-top: 1px solid #e9ecef;
+.profile-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.8rem;
+  gap: 12px;
+  padding: 20px 30px;
+  border-top: 1px solid #f5f5f5;
 }
 
-/* 头像预览 */
-.avatar-preview {
-  text-align: center;
-  margin-bottom: 1rem;
-}
-
-.avatar-preview img {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid #e9ecef;
-}
-
-/* 表单样式 */
-.form-group {
-  margin-bottom: 1.2rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: #2c3e50;
-  font-size: 0.9rem;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 0.7rem;
-  border: 1px solid #ddd;
+.btn-edit {
+  flex: 1;
+  padding: 10px 20px;
+  background: #1890ff;
+  color: white;
+  border: none;
   border-radius: 6px;
-  font-size: 0.9rem;
-  transition: border-color 0.3s;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: #3498db;
+.btn-edit:hover {
+  background: #40a9ff;
 }
 
-/* 加载动画 */
-.loading {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid transparent;
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-right: 8px;
+.btn-password {
+  flex: 1;
+  padding: 10px 20px;
+  background: white;
+  color: #595959;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
+.btn-password:hover {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+.code-input-group {
+  display: flex;
+  gap: 10px;
+}
+
+.code-input-group .el-input {
+  flex: 1;
+}
+
+@media (max-width: 576px) {
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
   }
-  100% {
-    transform: rotate(360deg);
+
+  .profile-footer {
+    flex-direction: column;
   }
 }
 </style>

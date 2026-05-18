@@ -33,6 +33,7 @@ onMounted(() => {
       <div class="header-content">
         <div class="header-left">
           <h1 class="title">智器通</h1>
+          <span class="role-tag user-tag">用户端</span>
         </div>
         
         <div class="user-info-container">
@@ -50,7 +51,7 @@ onMounted(() => {
             </div>
             <span class="user-name">{{ userInfo.username || '用户' }}</span>
           </div>
-          <button class="logout-btn" @click="logout">退出登录</button>
+          <a class="logout-link" @click="logout">退出登录</a>
         </div>
       </div>
     </el-header>
@@ -79,7 +80,7 @@ onMounted(() => {
 <style scoped>
 .header {
   background: #fff;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid #f0f0f0;
   height: 64px;
   display: flex;
   align-items: center;
@@ -96,13 +97,35 @@ onMounted(() => {
 .header-left {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .title {
-  font-size: 20px;
-  font-weight: 500;
-  color: #333;
+  font-size: 24px;
+  font-weight: 700;
+  color: #262626;
   margin: 0;
+  letter-spacing: 2px;
+  transform: translateY(-2px);
+}
+
+.role-tag {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.user-tag {
+  color: #52c41a;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+
+.admin-tag {
+  color: #fa541c;
+  background: #fff2e8;
+  border: 1px solid #ffbb96;
 }
 
 .user-info-container {
@@ -114,15 +137,12 @@ onMounted(() => {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 16px;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
+  gap: 10px;
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   overflow: hidden;
   display: flex;
@@ -144,28 +164,25 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-weight: 500;
-  color: #666;
-  font-size: 16px;
+  color: #8c8c8c;
+  font-size: 14px;
 }
 
 .user-name {
-  color: #333;
+  color: #595959;
   font-weight: 500;
   font-size: 14px;
 }
 
-.logout-btn {
-  color: #1890ff;
+.logout-link {
+  color: #8c8c8c;
   font-size: 14px;
   cursor: pointer;
-  background: none;
-  border: 1px solid #1890ff;
-  border-radius: 4px;
-  padding: 6px 16px;
+  transition: color 0.3s;
 }
 
-.logout-btn:hover {
-  background: #e6f7ff;
+.logout-link:hover {
+  color: #1890ff;
 }
 
 .main-container {
@@ -174,7 +191,7 @@ onMounted(() => {
 
 .el-aside {
   background: #fff;
-  border-right: 1px solid #e8e8e8;
+  border-right: 1px solid #f0f0f0;
 }
 
 .el-menu-vertical-demo {
@@ -182,10 +199,10 @@ onMounted(() => {
 }
 
 .el-menu-vertical-demo .el-menu-item {
-  height: 56px;
-  line-height: 56px;
+  height: 48px;
+  line-height: 48px;
   font-size: 14px;
-  color: #666;
+  color: #595959;
 }
 
 .el-menu-vertical-demo .el-menu-item:hover {

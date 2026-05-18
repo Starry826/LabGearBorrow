@@ -1,708 +1,389 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { equipmentAPI } from '@/apis/admin';
-import { ElMessage } from 'element-plus';
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { equipmentAPI } from '@/apis/admin'
 
-const lists = ref([]);
-const activeCategory = ref('1'); // 当前选中的分类
-const loading = ref(false); // 加载状态
-const searchKeyword = ref(''); // 搜索关键词
-
-// 弹窗控制
-const addDialogVisible = ref(false);
-const editDialogVisible = ref(false);
-const deleteDialogVisible = ref(false);
-const deleteLoading = ref(false);
-const currentDeleteEquipment = ref(null);
-
-// 表单数据
+const equipmentList = ref([])
+const loading = ref(false)
+const dialogVisible = ref(false)
+const dialogTitle = ref('')
+const searchQuery = ref('')
+const activeCategory = ref(1)
 const form = ref({
-  id: '',
+  id: null,
   name: '',
-  category: '',
-  subCategory: '',
+  category: 1,
+  subCategory: 1,
   totalQuantity: 0,
+  availableQuantity: 0,
   deposit: 0
-});
+})
 
-// 存储原始设备信息用于计算可用数量
-const originalEquipment = ref(null);
+const categoryOptions = [
+  { id: 1, name: '物理' },
+  { id: 2, name: '化学' },
+  { id: 3, name: '生物' }
+]
 
-// 分类选项 - 大类
-const categories = [
-  { id: '1', name: '物理' },
-  { id: '2', name: '化学' },
-  { id: '3', name: '生物' }
-];
+const categoryMap = {
+  1: '物理设备',
+  2: '化学设备',
+  3: '生物设备'
+}
 
-// 小类映射
 const subCategoryMap = {
-  // 物理
-  '1': [
-    { id: 1, name: '电学' },
-    { id: 2, name: '光学' },
-    { id: 3, name: '力学' },
-    { id: 4, name: '声学' }
-  ],
-  // 化学
-  '2': [
-    { id: 1, name: '玻璃仪器' },
-    { id: 2, name: '化学试剂' },
-    { id: 3, name: '加热设备' },
-    { id: 4, name: '计量设备' }
-  ],
-  // 生物
-  '3': [
-    { id: 1, name: '显微镜' },
-    { id: 2, name: '培养设备' },
-    { id: 3, name: '解剖工具' },
-    { id: 4, name: '无菌设备' },
-    { id: 5, name: '标本制作工具' }
-  ]
-};
+  1: {
+    1: '电学器材',
+    2: '光学器材',
+    3: '力学器材',
+    4: '声学器材'
+  },
+  2: {
+    1: '玻璃仪器',
+    2: '化学试剂',
+    3: '加热设备',
+    4: '计量设备'
+  },
+  3: {
+    1: '显微镜',
+    2: '培养设备',
+    3: '解剖器材',
+    4: '染色设备'
+  }
+}
 
-// 获取当前大类对应的小类选项
-const subCategoryOptions = computed(() => {
-  return subCategoryMap[form.value.category] || [];
-});
-
-// 获取数据
 const fetchData = async () => {
   try {
-    loading.value = true;
-    const result = await equipmentAPI.getAll({ category: activeCategory.value });
-    
-    if (result && result.data) {
-      lists.value = result.data;
+    loading.value = true
+    const result = await equipmentAPI.getAll({ category: activeCategory.value })
+    if (result && result.code === 0 && Array.isArray(result.data)) {
+      equipmentList.value = result.data
+    } else if (Array.isArray(result)) {
+      equipmentList.value = result
+    } else if (result && Array.isArray(result.data)) {
+      equipmentList.value = result.data
+    } else {
+      equipmentList.value = []
     }
   } catch (error) {
-    console.error('请求失败:', error);
-    ElMessage.error('获取设备数据失败');
+    console.error('请求失败:', error)
+    ElMessage.error('获取设备列表失败')
+    equipmentList.value = []
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
-// 根据分类和搜索关键词筛选设备
-const filteredLists = computed(() => {
-  let filtered = lists.value;
-  
-  // 根据搜索关键词筛选
-  if (searchKeyword.value) {
-    filtered = filtered.filter(item => 
-      item.name.toLowerCase().includes(searchKeyword.value.toLowerCase())
-    );
+const switchCategory = (category) => {
+  activeCategory.value = category
+  fetchData()
+}
+
+const handleSearch = () => {
+  if (!searchQuery.value) {
+    fetchData()
+    return
   }
-  
-  return filtered;
-});
+  const query = searchQuery.value.toLowerCase()
+  equipmentList.value = equipmentList.value.filter(item =>
+    item.name.toLowerCase().includes(query)
+  )
+}
 
-// 切换分类
-const switchCategory = (categoryId) => {
-  activeCategory.value = categoryId;
-  fetchData();
-};
-
-// 获取小类名称
-const getSubCategoryName = (subCategoryId) => {
-  const mainCategory = activeCategory.value;
-  const subCategories = subCategoryMap[mainCategory] || [];
-  const subCategory = subCategories.find(item => item.id === subCategoryId);
-  return subCategory ? subCategory.name : '未知分类';
-};
-
-// 清空搜索框
-const clearSearch = () => {
-  searchKeyword.value = '';
-};
-
-// 打开新增设备弹窗
-const openAddDialog = () => {
-  // 重置表单
+const handleAdd = () => {
+  dialogTitle.value = '新增设备'
   form.value = {
-    id: '',
+    id: null,
     name: '',
-    category: activeCategory.value,
-    subCategory: '',
+    category: 1,
+    subCategory: 1,
     totalQuantity: 0,
+    availableQuantity: 0,
     deposit: 0
-  };
-  addDialogVisible.value = true;
-};
+  }
+  dialogVisible.value = true
+}
 
-// 提交新增设备
-const handleAdd = async () => {
+const handleEdit = (row) => {
+  dialogTitle.value = '修改设备'
+  form.value = { ...row }
+  dialogVisible.value = true
+}
+
+const handleDelete = async (row) => {
   try {
-    // 验证表单
-    if (!form.value.name) {
-      ElMessage.error('请输入设备名称');
-      return;
-    }
-    if (!form.value.category) {
-      ElMessage.error('请选择设备大类');
-      return;
-    }
-    if (!form.value.subCategory) {
-      ElMessage.error('请选择设备小类');
-      return;
-    }
-    if (!form.value.totalQuantity || form.value.totalQuantity <= 0) {
-      ElMessage.error('请输入正确的总数量');
-      return;
-    }
-    if (form.value.deposit < 0) {
-      ElMessage.error('押金不能为负数');
-      return;
-    }
-
-    // 构造请求数据
-    const requestData = {
-      ...form.value,
-      availableQuantity: form.value.totalQuantity // 可用数量等于总数量
-    };
-
-    const result = await equipmentAPI.add(requestData);
-    if (result.code === 0) {
-      ElMessage.success('新增设备成功');
-      addDialogVisible.value = false;
-      fetchData(); // 刷新列表
-    } else {
-      ElMessage.error(result.message || '新增设备失败');
-    }
+    await equipmentAPI.delete(row.id)
+    ElMessage.success('删除成功')
+    fetchData()
   } catch (error) {
-    console.error('新增设备失败:', error);
-    ElMessage.error('新增设备失败');
+    ElMessage.error('删除失败')
   }
-};
+}
 
-// 打开修改设备弹窗
-const openEditDialog = (equipment) => {
-  // 存储原始设备信息
-  originalEquipment.value = { ...equipment };
-  
-  // 填充表单数据
-  form.value = {
-    id: equipment.id,
-    name: equipment.name,
-    category: equipment.category.toString(),
-    subCategory: equipment.subCategory,
-    totalQuantity: equipment.totalQuantity,
-    deposit: equipment.deposit
-  };
-  editDialogVisible.value = true;
-};
-
-// 计算新的可用数量
-const calculateNewAvailableQuantity = (oldTotal, newTotal, oldAvailable) => {
-  // 计算总数量变化量
-  const quantityChange = newTotal - oldTotal;
-  
-  // 新的可用数量 = 原可用数量 + 变化量
-  const newAvailable = oldAvailable + quantityChange;
-  
-  // 确保可用数量不小于0且不超过总数量
-  return Math.max(0, Math.min(newAvailable, newTotal));
-};
-
-// 验证总数量修改
-const validateTotalQuantity = () => {
-  if (!originalEquipment.value) return true;
-  
-  const oldTotal = originalEquipment.value.totalQuantity;
-  const newTotal = form.value.totalQuantity;
-  const oldAvailable = originalEquipment.value.availableQuantity;
-  
-  // 如果总数量减少，确保不会导致可用数量为负数
-  if (newTotal < oldTotal) {
-    const quantityChange = newTotal - oldTotal;
-    const newAvailable = oldAvailable + quantityChange;
-    
-    if (newAvailable < 0) {
-      ElMessage.error(`不能将总数量减少到${oldTotal + oldAvailable}以下，否则可用数量将为负数`);
-      return false;
-    }
-  }
-  
-  return true;
-};
-
-// 提交修改设备
-const handleEdit = async () => {
+const handleSubmit = async () => {
   try {
-    // 验证表单
-    if (!form.value.name) {
-      ElMessage.error('请输入设备名称');
-      return;
-    }
-    if (!form.value.category) {
-      ElMessage.error('请选择设备大类');
-      return;
-    }
-    if (!form.value.subCategory) {
-      ElMessage.error('请选择设备小类');
-      return;
-    }
-    if (!form.value.totalQuantity || form.value.totalQuantity <= 0) {
-      ElMessage.error('请输入正确的总数量');
-      return;
-    }
-    if (form.value.deposit < 0) {
-      ElMessage.error('押金不能为负数');
-      return;
-    }
-
-    // 验证总数量修改是否合法
-    if (!validateTotalQuantity()) {
-      return;
-    }
-
-    // 获取原始设备信息
-    if (!originalEquipment.value) {
-      ElMessage.error('未找到原始设备信息');
-      return;
-    }
-
-    // 计算新的可用数量
-    const newAvailableQuantity = calculateNewAvailableQuantity(
-      originalEquipment.value.totalQuantity,
-      form.value.totalQuantity,
-      originalEquipment.value.availableQuantity
-    );
-
-    // 构造请求数据
-    const requestData = {
-      ...form.value,
-      availableQuantity: newAvailableQuantity
-    };
-
-    const result = await equipmentAPI.update(requestData);
-    if (result.code === 0) {
-      ElMessage.success('修改设备成功');
-      editDialogVisible.value = false;
-      fetchData(); // 刷新列表
+    if (form.value.id) {
+      await equipmentAPI.update(form.value)
+      ElMessage.success('修改成功')
     } else {
-      ElMessage.error(result.message || '修改设备失败');
+      await equipmentAPI.add(form.value)
+      ElMessage.success('新增成功')
     }
+    dialogVisible.value = false
+    fetchData()
   } catch (error) {
-    console.error('修改设备失败:', error);
-    ElMessage.error('修改设备失败');
+    ElMessage.error('操作失败')
   }
-};
+}
 
-// 打开删除确认对话框
-const openDeleteDialog = (equipment) => {
-  currentDeleteEquipment.value = equipment;
-  deleteDialogVisible.value = true;
-};
+const getCategoryName = (category) => {
+  return categoryMap[category] || '未知分类'
+}
 
-// 确认删除设备
-const confirmDelete = async () => {
-  if (!currentDeleteEquipment.value) return;
-  
-  try {
-    deleteLoading.value = true;
-    const result = await equipmentAPI.delete(currentDeleteEquipment.value.id);
-    
-    if (result.code === 0) {
-      ElMessage.success('删除设备成功');
-      deleteDialogVisible.value = false;
-      fetchData(); // 刷新列表
-    } else {
-      ElMessage.error(result.message || '删除设备失败');
-    }
-  } catch (error) {
-    console.error('删除设备失败:', error);
-    ElMessage.error('删除设备失败');
-  } finally {
-    deleteLoading.value = false;
-  }
-};
+const getSubCategoryName = (category, subCategory) => {
+  return subCategoryMap[category]?.[subCategory] || '未知分类'
+}
 
 onMounted(() => {
-  fetchData();
-});
+  fetchData()
+})
 </script>
 
 <template>
-  <div class="equipment-management">
-    <!-- 页面标题 -->
+  <div class="equipment-page">
     <div class="page-header">
-      <h1 class="page-title">设备管理</h1>
-    </div>
-
-    <!-- 工具栏 -->
-    <div class="toolbar">
-      <!-- 分类导航 -->
       <div class="category-nav">
-        <div 
-          v-for="category in categories" 
-          :key="category.id"
-          :class="['category-item', { 'active': activeCategory === category.id }]"
-          @click="switchCategory(category.id)"
+        <div
+          v-for="cat in categoryOptions"
+          :key="cat.id"
+          :class="['category-item', { 'active': activeCategory === cat.id }]"
+          @click="switchCategory(cat.id)"
         >
-          {{ category.name }}
+          {{ cat.name }}
         </div>
       </div>
-
-      <!-- 搜索和操作栏 -->
-      <div class="search-actions">
-        <div class="search-input-wrapper">
-          <div class="search-input">
-            <input 
-              type="text" 
-              v-model="searchKeyword" 
-              placeholder="请输入设备名称" 
-            />
-            <span 
-              v-if="searchKeyword" 
-              class="clear-icon"
-              @click="clearSearch"
-            >
-              ×
-            </span>
-          </div>
+      <div class="header-actions">
+        <div class="search-box">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索设备名称"
+            @keyup.enter="handleSearch"
+          />
+          <button class="btn-search" @click="handleSearch">搜索</button>
         </div>
-        <button class="btn btn-add" @click="openAddDialog">新增设备</button>
+        <button class="btn-add" @click="handleAdd">新增设备</button>
       </div>
     </div>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>正在加载设备数据...</p>
-    </div>
-
-    <!-- 设备列表 -->
-    <div v-else class="equipment-list">
-      <div v-if="filteredLists.length === 0" class="empty-state">
-        <p>{{ searchKeyword ? '未找到相关设备' : '暂无设备数据' }}</p>
+    <div class="table-container">
+      <div v-if="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>正在加载数据...</p>
       </div>
-      
+
+      <div v-else-if="equipmentList.length === 0" class="empty-state">
+        <p>暂无设备数据</p>
+      </div>
+
       <div v-else class="equipment-table">
-        <!-- 表头 -->
         <div class="table-header">
+          <div class="col-id">ID</div>
           <div class="col-name">设备名称</div>
-          <div class="col-category">设备类型</div>
-          <div class="col-quantity">总数量</div>
+          <div class="col-category">分类</div>
+          <div class="col-sub">子分类</div>
+          <div class="col-total">总数量</div>
           <div class="col-available">可用数量</div>
-          <div class="col-status">状态</div>
           <div class="col-deposit">押金</div>
           <div class="col-actions">操作</div>
         </div>
-        
-        <!-- 设备行 -->
-        <div 
-          v-for="item in filteredLists" 
+
+        <div
+          v-for="item in equipmentList"
           :key="item.id"
           class="equipment-row"
         >
-          <div class="col-name">
-            <div class="equipment-name">{{ item.name }}</div>
-            <div class="equipment-id">编号: {{ item.id }}</div>
-          </div>
-          <div class="col-category">
-            {{ getSubCategoryName(item.subCategory) }}
-          </div>
-          <div class="col-quantity">
-            {{ item.totalQuantity }}
-          </div>
-          <div class="col-available">
-            {{ item.availableQuantity }}
-          </div>
-          <div class="col-status">
-            <span :class="['status-badge', item.availableQuantity > 0 ? 'available' : 'unavailable']">
-              {{ item.availableQuantity > 0 ? '可用' : '不可用' }}
-            </span>
-          </div>
-          <div class="col-deposit">
-            ￥{{ item.deposit }}
-          </div>
+          <div class="col-id">{{ item.id }}</div>
+          <div class="col-name">{{ item.name }}</div>
+          <div class="col-category">{{ getCategoryName(item.category) }}</div>
+          <div class="col-sub">{{ getSubCategoryName(item.category, item.subCategory) }}</div>
+          <div class="col-total">{{ item.totalQuantity }}</div>
+          <div class="col-available">{{ item.availableQuantity }}</div>
+          <div class="col-deposit">￥{{ item.deposit }}</div>
           <div class="col-actions">
-            <button class="btn-edit" @click="openEditDialog(item)">
-              修改
-            </button>
-            <button class="btn-delete" @click="openDeleteDialog(item)">
-              删除
-            </button>
+            <button class="btn-edit" @click="handleEdit(item)">修改</button>
+            <button class="btn-delete" @click="handleDelete(item)">删除</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 新增设备弹窗 -->
     <el-dialog
-      v-model="addDialogVisible"
-      title="新增设备"
+      v-model="dialogVisible"
+      :title="dialogTitle"
       width="500px"
-      align-center
     >
-      <el-form :model="form" label-width="80px">
+      <el-form :model="form" label-width="100px">
         <el-form-item label="设备名称">
-          <el-input v-model="form.name" placeholder="请输入设备名称" />
+          <el-input v-model="form.name" />
         </el-form-item>
-        <el-form-item label="设备大类">
-          <el-select v-model="form.category" placeholder="请选择设备大类" style="width: 100%">
-            <el-option
-              v-for="category in categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id"
-            />
+        <el-form-item label="分类">
+          <el-select v-model="form.category">
+            <el-option label="物理设备" :value="1" />
+            <el-option label="化学设备" :value="2" />
+            <el-option label="生物设备" :value="3" />
           </el-select>
         </el-form-item>
-        <el-form-item label="设备小类">
-          <el-select v-model="form.subCategory" placeholder="请选择设备小类" style="width: 100%">
+        <el-form-item label="子分类">
+          <el-select v-model="form.subCategory">
             <el-option
-              v-for="subCategory in subCategoryOptions"
-              :key="subCategory.id"
-              :label="subCategory.name"
-              :value="subCategory.id"
+              v-for="(name, key) in subCategoryMap[form.category]"
+              :key="key"
+              :label="name"
+              :value="Number(key)"
             />
           </el-select>
         </el-form-item>
         <el-form-item label="总数量">
-          <el-input-number v-model="form.totalQuantity" :min="1" style="width: 100%" />
+          <el-input-number v-model="form.totalQuantity" :min="0" />
+        </el-form-item>
+        <el-form-item label="可用数量">
+          <el-input-number v-model="form.availableQuantity" :min="0" />
         </el-form-item>
         <el-form-item label="押金">
-          <el-input-number v-model="form.deposit" :min="0" :precision="2" style="width: 100%" />
+          <el-input-number v-model="form.deposit" :min="0" />
         </el-form-item>
       </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="addDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleAdd">确定</el-button>
-        </span>
-      </template>
-    </el-dialog>
 
-    <!-- 修改设备弹窗 -->
-    <el-dialog
-      v-model="editDialogVisible"
-      title="修改设备"
-      width="500px"
-      align-center
-    >
-      <el-form :model="form" label-width="80px">
-        <el-form-item label="设备名称">
-          <el-input v-model="form.name" placeholder="请输入设备名称" />
-        </el-form-item>
-        <el-form-item label="设备大类">
-          <el-select v-model="form.category" placeholder="请选择设备大类" style="width: 100%">
-            <el-option
-              v-for="category in categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="设备小类">
-          <el-select v-model="form.subCategory" placeholder="请选择设备小类" style="width: 100%">
-            <el-option
-              v-for="subCategory in subCategoryOptions"
-              :key="subCategory.id"
-              :label="subCategory.name"
-              :value="subCategory.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="总数量">
-          <el-input-number 
-            v-model="form.totalQuantity" 
-            :min="originalEquipment ? originalEquipment.availableQuantity : 1" 
-            style="width: 100%" 
-          />
-        </el-form-item>
-        <el-form-item label="押金">
-          <el-input-number v-model="form.deposit" :min="0" :precision="2" style="width: 100%" />
-        </el-form-item>
-      </el-form>
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="editDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleEdit">确定</el-button>
-        </span>
-      </template>
-    </el-dialog>
-
-    <!-- 删除确认对话框 -->
-    <el-dialog
-      v-model="deleteDialogVisible"
-      title="删除确认"
-      width="400px"
-      align-center
-    >
-      <div class="delete-dialog-content">
-        <div class="delete-icon">
-          <i class="el-icon-warning"></i>
-        </div>
-        <div class="delete-text">
-          <p>确定要删除设备 <strong>"{{ currentDeleteEquipment?.name }}"</strong> 吗？</p>
-        </div>
-      </div>
-      
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button 
-            @click="deleteDialogVisible = false" 
-            :disabled="deleteLoading"
-          >
-            取消
-          </el-button>
-          <el-button 
-            type="danger" 
-            @click="confirmDelete" 
-            :loading="deleteLoading"
-          >
-            {{ deleteLoading ? '删除中...' : '确认删除' }}
-          </el-button>
-        </div>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.equipment-management {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+.equipment-page {
+  padding: 0;
 }
 
 .page-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 10px;
-}
-
-/* 工具栏样式 */
-.toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eaeaea;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-/* 分类导航样式 */
 .category-nav {
   display: flex;
+  gap: 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .category-item {
-  padding: 10px 20px;
-  margin: 0 5px;
-  border-radius: 20px;
+  padding: 10px 24px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s;
   font-weight: 500;
-  color: #555;
+  font-size: 14px;
+  color: #595959;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
 }
 
 .category-item:hover {
-  background-color: #f0f0f0;
+  color: #1890ff;
 }
 
 .category-item.active {
-  background-color: #409eff;
-  color: white;
+  color: #1890ff;
+  border-bottom-color: #1890ff;
 }
 
-/* 搜索和操作栏样式 */
-.search-actions {
+.header-actions {
   display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.search-input-wrapper {
-  position: relative;
-}
-
-.search-input {
-  position: relative;
-  display: flex;
+  gap: 12px;
   align-items: center;
 }
 
-.search-input input {
+.search-box {
+  display: flex;
+  gap: 8px;
+}
+
+.search-box input {
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
   width: 200px;
-  padding: 8px 30px 8px 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  outline: none;
   transition: border-color 0.3s;
 }
 
-.search-input input:focus {
-  border-color: #409eff;
+.search-box input:focus {
+  outline: none;
+  border-color: #1890ff;
 }
 
-.clear-icon {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #c0c4cc;
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s;
-}
-
-.clear-icon:hover {
-  background-color: #f0f0f0;
-  color: #909399;
-}
-
-.btn {
+.btn-search {
   padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
+  background: #f5f5f5;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
   font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s;
+  color: #595959;
+}
+
+.btn-search:hover {
+  color: #1890ff;
+  border-color: #1890ff;
 }
 
 .btn-add {
-  background-color: #67c23a;
+  padding: 8px 20px;
+  background: #1890ff;
   color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s;
 }
 
 .btn-add:hover {
-  background-color: #85ce61;
+  background: #40a9ff;
 }
 
-/* 加载状态样式 */
+.table-container {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+}
+
 .loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 50px 0;
+  padding: 60px 0;
+  color: #8c8c8c;
+  font-size: 14px;
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #409eff;
+  width: 36px;
+  height: 36px;
+  border: 3px solid #f5f5f5;
+  border-top: 3px solid #1890ff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 @keyframes spin {
@@ -710,190 +391,106 @@ onMounted(() => {
   100% { transform: rotate(360deg); }
 }
 
-/* 表格样式 */
+.empty-state {
+  text-align: center;
+  padding: 60px 0;
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
 .equipment-table {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  width: 100%;
 }
 
 .table-header {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1.5fr;
+  grid-template-columns: 60px 1.5fr 1fr 1fr 80px 80px 80px 140px;
   gap: 10px;
-  padding: 15px 20px;
-  background-color: #f8f9fa;
+  padding: 14px 20px;
+  background-color: #fafafa;
   font-weight: 600;
-  color: #495057;
-  border-bottom: 1px solid #e9ecef;
+  color: #262626;
+  font-size: 14px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .equipment-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1.5fr;
+  grid-template-columns: 60px 1.5fr 1fr 1fr 80px 80px 80px 140px;
   gap: 10px;
-  padding: 15px 20px;
-  border-bottom: 1px solid #e9ecef;
-  transition: background-color 0.2s ease;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background-color 0.2s;
   align-items: center;
+  font-size: 14px;
 }
 
 .equipment-row:hover {
-  background-color: #f8f9fa;
+  background-color: #fafafa;
 }
 
 .equipment-row:last-child {
   border-bottom: none;
 }
 
+.col-id {
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
 .col-name {
-  display: flex;
-  flex-direction: column;
-}
-
-.equipment-name {
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 4px;
-}
-
-.equipment-id {
-  font-size: 12px;
-  color: #6c757d;
+  font-weight: 500;
+  color: #262626;
 }
 
 .col-category,
-.col-quantity,
-.col-deposit,
-.col-available {
-  color: #495057;
-}
-
-.col-status {
-  display: flex;
-  justify-content: flex-start;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-badge.available {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status-badge.unavailable {
-  background-color: #ffebee;
-  color: #c62828;
+.col-sub,
+.col-total,
+.col-available,
+.col-deposit {
+  color: #595959;
 }
 
 .col-actions {
   display: flex;
-  gap: 10px;
-  justify-content: center;
-}
-
-.btn-edit,
-.btn-delete {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  gap: 8px;
 }
 
 .btn-edit {
-  background-color: #e6a23c;
-  color: white;
+  padding: 4px 12px;
+  background: #e6f7ff;
+  color: #1890ff;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.3s;
 }
 
 .btn-edit:hover {
-  background-color: #ebb563;
+  background: #bae7ff;
 }
 
 .btn-delete {
-  background-color: #f56c6c;
-  color: white;
+  padding: 4px 12px;
+  background: #fff2f0;
+  color: #ff4d4f;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.3s;
 }
 
 .btn-delete:hover {
-  background-color: #f78989;
+  background: #ffccc7;
 }
 
-/* 空状态样式 */
-.empty-state {
-  text-align: center;
-  padding: 50px 0;
-  color: #7f8c8d;
-}
-
-/* 删除确认对话框样式 */
-.delete-dialog-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 10px 0;
-}
-
-.delete-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: #e6a23c;
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.delete-text {
-  flex: 1;
-}
-
-.delete-text p {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #606266;
-  line-height: 1.5;
-}
-
-.delete-text strong {
-  color: #e6a23c;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .toolbar {
+@media (max-width: 992px) {
+  .page-header {
     flex-direction: column;
-    gap: 15px;
-    align-items: stretch;
-  }
-  
-  .category-nav {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  
-  .category-item {
-    margin-bottom: 10px;
-  }
-  
-  .search-actions {
-    justify-content: center;
+    align-items: flex-start;
+    gap: 16px;
   }
   
   .table-header {
@@ -904,56 +501,36 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     padding: 15px;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
   }
   
+  .col-id,
   .col-name,
   .col-category,
-  .col-quantity,
+  .col-sub,
+  .col-total,
   .col-available,
-  .col-status,
   .col-deposit,
   .col-actions {
     display: flex;
     justify-content: space-between;
     width: 100%;
-    padding: 8px 0;
-    border-bottom: 1px solid #f1f1f1;
+    padding: 6px 0;
   }
   
-  .col-name::before { content: "设备名称: "; font-weight: 600; }
-  .col-category::before { content: "小类: "; font-weight: 600; }
-  .col-quantity::before { content: "总数量: "; font-weight: 600; }
-  .col-available::before { content: "可用数量: "; font-weight: 600; }
-  .col-status::before { content: "状态: "; font-weight: 600; }
-  .col-deposit::before { content: "押金: "; font-weight: 600; }
-  .col-actions::before { content: "操作: "; font-weight: 600; }
+  .col-id::before { content: "ID: "; font-weight: 600; color: #262626; }
+  .col-name::before { content: "设备名称: "; font-weight: 600; color: #262626; }
+  .col-category::before { content: "分类: "; font-weight: 600; color: #262626; }
+  .col-sub::before { content: "子分类: "; font-weight: 600; color: #262626; }
+  .col-total::before { content: "总数量: "; font-weight: 600; color: #262626; }
+  .col-available::before { content: "可用数量: "; font-weight: 600; color: #262626; }
+  .col-deposit::before { content: "押金: "; font-weight: 600; color: #262626; }
+  .col-actions::before { content: "操作: "; font-weight: 600; color: #262626; }
   
   .col-actions {
-    border-bottom: none;
-    flex-direction: column;
-    gap: 8px;
-    padding-top: 12px;
-  }
-  
-  .col-actions::before {
-    margin-bottom: 5px;
-  }
-  
-  .btn-edit, .btn-delete {
-    width: 100%;
-  }
-}
-
-@media (max-width: 576px) {
-  .equipment-management {
-    padding: 15px;
-  }
-  
-  .search-input input {
-    width: 150px;
+    padding-top: 10px;
+    border-top: 1px solid #f5f5f5;
+    margin-top: 6px;
   }
 }
 </style>

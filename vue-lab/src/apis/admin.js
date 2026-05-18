@@ -35,7 +35,7 @@ export const userAPI = {
   // 删除用户
   delete: (id) => request.delete('/user/delete', { params: { id } }),
   // 上传头像
-  upload: (data,id) => request.put('/user/allUpload/'+id, data),
+  upload: (data,id) => request.post('/user/allUpload/'+id, data),
 
 }
 

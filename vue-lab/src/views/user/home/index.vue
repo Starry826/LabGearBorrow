@@ -5,9 +5,9 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const stats = ref([
-  { title: '设备总数', value: 0 },
-  { title: '可用设备', value: 0 },
-  { title: '已借用', value: 0 }
+  { title: '设备总数', value: 0, color: '#1890ff', bgColor: '#e6f7ff' },
+  { title: '可用设备', value: 0, color: '#52c41a', bgColor: '#f6ffed' },
+  { title: '已借用', value: 0, color: '#faad14', bgColor: '#fffbe6' }
 ])
 
 const labCategories = ref([
@@ -64,9 +64,10 @@ onMounted(() => {
         v-for="stat in stats" 
         :key="stat.title" 
         class="stat-card"
+        :style="{ borderLeft: `4px solid ${stat.color}` }"
       >
         <div class="stat-content">
-          <div class="stat-value">{{ stat.value }}</div>
+          <div class="stat-value" :style="{ color: stat.color }">{{ stat.value }}</div>
           <div class="stat-title">{{ stat.title }}</div>
         </div>
       </div>
@@ -145,81 +146,79 @@ onMounted(() => {
 <style scoped>
 .dashboard {
   padding: 0;
-  background: #f5f5f5;
 }
 
 .stats-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-bottom: 24px;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
 .stat-card {
   background: #fff;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 24px;
-  border: 1px solid #e8e8e8;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .stat-value {
-  font-size: 30px;
-  font-weight: 500;
-  color: #1890ff;
+  font-size: 28px;
+  font-weight: 600;
   margin-bottom: 8px;
 }
 
 .stat-title {
-  color: #666;
+  color: #8c8c8c;
   font-size: 14px;
 }
 
 .main-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 20px;
 }
 
 .card {
   background: #fff;
-  border-radius: 4px;
-  border: 1px solid #e8e8e8;
-  margin-bottom: 24px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  margin-bottom: 20px;
 }
 
 .card-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid #e8e8e8;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .card-header h3 {
   margin: 0;
   font-size: 16px;
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: #262626;
 }
 
 .card-body {
-  padding: 24px;
+  padding: 20px;
 }
 
 .labs-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .lab-item {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  border-radius: 4px;
+  padding: 14px 16px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .lab-item:hover {
-  background: #fafafa;
+  background: #f5f5f5;
 }
 
 .lab-text {
@@ -229,18 +228,18 @@ onMounted(() => {
 .lab-name {
   font-weight: 500;
   font-size: 14px;
-  color: #333;
+  color: #262626;
   margin-bottom: 4px;
 }
 
 .lab-count {
   font-size: 13px;
-  color: #999;
+  color: #8c8c8c;
 }
 
 .lab-arrow {
-  color: #999;
-  font-size: 16px;
+  color: #bfbfbf;
+  font-size: 14px;
 }
 
 .info-list {
@@ -257,13 +256,13 @@ onMounted(() => {
 
 .info-label {
   font-size: 14px;
-  color: #666;
+  color: #595959;
 }
 
 .info-value {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 4px;
 }
 
@@ -280,30 +279,30 @@ onMounted(() => {
 .actions-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .action-item {
-  padding: 12px 16px;
-  border-radius: 4px;
+  padding: 14px 16px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .action-item:hover {
-  background: #fafafa;
+  background: #f5f5f5;
 }
 
 .action-title {
   font-weight: 500;
   font-size: 14px;
-  color: #333;
+  color: #262626;
   margin-bottom: 4px;
 }
 
 .action-desc {
   font-size: 13px;
-  color: #999;
+  color: #8c8c8c;
 }
 
 @media (max-width: 992px) {
