@@ -32,23 +32,36 @@ const handleLogin = async () => {
 };
 
 const handleRegister = async () => {
-  if (user.value.username && user.value.password && user.value.email) {
+  if (user.value.username && user.value.password && user.value.email && verificationCode.value) {
     // 邮箱格式验证
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(user.value.email)) {
       ElMessage.error("请输入正确的邮箱地址");
       return;
     }
-    // 注册逻辑
-    const result = await loginAPI.register(user.value);
-    if (result.code == 0) {
-      ElMessage.success("注册成功");
-      switchForm("login");
-    } else {
-      ElMessage.error(result.message);
+    // 先验证验证码
+    try {
+      const verifyResult = await loginAPI.verifyCode({
+        email: user.value.email,
+        code: verificationCode.value,
+      });
+      if (verifyResult.code !== 0) {
+        ElMessage.error(verifyResult.message);
+        return;
+      }
+      // 注册逻辑
+      const result = await loginAPI.register(user.value);
+      if (result.code == 0) {
+        ElMessage.success("注册成功");
+        switchForm("login");
+      } else {
+        ElMessage.error(result.message);
+      }
+    } catch (error) {
+      ElMessage.error("验证失败，请稍后重试");
     }
   } else {
-    alert("请填写完整信息");
+    ElMessage.error("请填写完整信息");
   }
 };
 
@@ -138,7 +151,7 @@ const switchForm = (form) => {
 
 <template>
   <div class="login-container">
-    <h2 class="login-title">实验室设备管理平台</h2>
+    <h2 class="login-title">智器通</h2>
 
     <!-- 登录表单 -->
     <form
@@ -185,7 +198,7 @@ const switchForm = (form) => {
     <form
       v-if="currentForm === 'register'"
       @submit.prevent="handleRegister"
-      class="login-form"
+      class="login-form forgot-form"
     >
       <div class="input-group">
         <label for="reg-username" class="label">用户名</label>
@@ -211,7 +224,6 @@ const switchForm = (form) => {
       </div>
       <div class="input-group">
         <label for="email" class="label">邮箱</label>
-        <!-- 将手机号改为邮箱 -->
         <input
           id="email"
           v-model="user.email"
@@ -220,6 +232,27 @@ const switchForm = (form) => {
           placeholder="请输入邮箱地址"
           required
         />
+      </div>
+      <div class="input-group">
+        <label for="reg-verification-code" class="label">验证码</label>
+        <div class="verification-code-group">
+          <input
+            id="reg-verification-code"
+            v-model="verificationCode"
+            type="text"
+            class="input-field verification-code-input"
+            placeholder="请输入验证码"
+            required
+          />
+          <button
+            type="button"
+            class="send-code-button"
+            @click="sendVerificationCode"
+            :disabled="countdown > 0"
+          >
+            {{ countdown > 0 ? `${countdown}秒后重新发送` : "发送验证码" }}
+          </button>
+        </div>
       </div>
       <button type="submit" class="login-button">注册</button>
       <div class="links">

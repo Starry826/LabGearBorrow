@@ -2,7 +2,7 @@ spring:
   application:
     name: JaveWeb
   datasource:
-    url: jdbc:mysql://mysql:3306/lab?useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/lab?useSSL=false&serverTimezone=Asia/Shanghai
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD}
